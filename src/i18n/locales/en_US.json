@@ -103,6 +103,7 @@
                 "source_target": "Source+Target",
                 "disable": "Disable",
                 "history_disable": "Disable History",
+                "use_clipboard": "Use Clipboard Mode",
                 "incremental_translate": "Incremental Translation",
                 "dynamic_translate": "Dynamic Translation",
                 "delete_newline": "Delete Newline",

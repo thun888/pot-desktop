@@ -224,11 +224,83 @@ fn translate_window() -> Window {
 }
 
 pub fn selection_translate() {
-    use selection::get_text;
-    // Get Selected Text
-    let text = get_text();
+    use tauri::ClipboardManager;
+    
+    let app_handle = APP.get().unwrap();
+    
+    // Check if using clipboard mode
+    let use_clipboard_mode = match get("selection_use_clipboard") {
+        Some(v) => v.as_bool().unwrap_or(false),
+        None => false,
+    };
+    
+    let text = if use_clipboard_mode {
+        // Mode 1: Simulate Ctrl+C and read from clipboard
+        info!("Using clipboard mode for selection translate");
+        
+        // Wait a moment for selection to be ready
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        
+        // Simulate Ctrl+C
+        #[cfg(target_os = "windows")]
+        {
+            use std::process::Command;
+            let _ = Command::new("powershell")
+                .args(&["-NoProfile", "-Command", "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^c')"])
+                .creation_flags(0x08000000) // CREATE_NO_WINDOW
+                .output();
+        }
+        
+        #[cfg(target_os = "macos")]
+        {
+            use std::process::Command;
+            let _ = Command::new("osascript")
+                .args(&["-e", "tell application \"System Events\" to keystroke \"c\" using command down"])
+                .output();
+        }
+        
+        #[cfg(target_os = "linux")]
+        {
+            use std::process::Command;
+            // Try xdotool first, fallback to xclip if not available
+            let result = Command::new("xdotool")
+                .args(&["key", "ctrl+c"])
+                .output();
+            
+            if result.is_err() {
+                warn!("xdotool not found, trying xclip");
+                let _ = Command::new("sh")
+                    .args(&["-c", "xdotool key ctrl+c 2>/dev/null || xclip -selection clipboard"])
+                    .output();
+            }
+        }
+        
+        // Wait for clipboard to update
+        std::thread::sleep(std::time::Duration::from_millis(150));
+        
+        // Read from clipboard
+        match app_handle.clipboard_manager().read_text() {
+            Ok(Some(content)) => {
+                info!("Read {} characters from clipboard", content.len());
+                content
+            },
+            Ok(None) => {
+                warn!("Clipboard is empty");
+                String::new()
+            },
+            Err(e) => {
+                warn!("Failed to read clipboard: {:?}", e);
+                String::new()
+            }
+        }
+    } else {
+        // Mode 2: Original method - direct selection reading
+        use selection::get_text;
+        info!("Using direct selection mode for selection translate");
+        get_text()
+    };
+    
     if !text.trim().is_empty() {
-        let app_handle = APP.get().unwrap();
         // Write into State
         let state: tauri::State<StringWrapper> = app_handle.state();
         state.0.lock().unwrap().replace_range(.., &text);

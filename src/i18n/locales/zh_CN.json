@@ -103,6 +103,7 @@
                 "source_target": "原文+译文",
                 "disable": "禁用",
                 "history_disable": "禁用历史记录",
+                "use_clipboard": "使用剪切板模式",
                 "incremental_translate": "增量翻译",
                 "dynamic_translate": "动态翻译",
                 "delete_newline": "自动删除换行",
